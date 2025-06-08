@@ -17,7 +17,8 @@ pub const std_options = std.Options{ .log_scope_levels = &[_]std.log.ScopeLevel{
 pub const RetWrapper = struct { ret: onebot.action.DynamicApiReturn, arena: rc.Arc(std.heap.ArenaAllocator) };
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     // init mongodb
@@ -186,6 +187,41 @@ const Handler = struct {
                     .group_id = e.group_id.?,
                     .message = chain.text(s.str()),
                 });
+                return;
+            }
+        }
+
+        if (e.user_id == 1071814607) {
+            if (utils.splitCommandStart(e.raw_message, "bind")) |value| {
+                const city_name = std.mem.trim(u8, value, " \n");
+                const gid = try std.fmt.allocPrint(allocator, "{d}", .{e.group_id.?});
+                const Filter = struct { group_id: []const u8 };
+                const Doc = struct { group_id: []const u8, city_name: []const u8 };
+                try self.app.group_info.replaceOne(Filter{ .group_id = gid }, Doc{ .group_id = gid, .city_name = city_name }, true);
+
+                var chain = onebot.MessageChain.init(self.app.allocator);
+                defer chain.deinit();
+                _ = try self.writeMessage(onebot.action.GroupMessageReq{ .group_id = e.group_id.?, .message = chain.text("绑定成功") });
+                return;
+            } else if (utils.splitCommandStart(e.raw_message, "addcity")) |value| {
+                const trimmed = std.mem.trim(u8, value, " \n");
+                var it = std.mem.splitScalar(u8, trimmed, ' ');
+                if (it.next()) |province| {
+                    if (it.next()) |city| {
+                        const Doc = struct { province_name: []const u8, city_name: []const u8 };
+                        try self.app.city_info.insertOne(Doc{ .province_name = province, .city_name = city });
+                        var chain = onebot.MessageChain.init(self.app.allocator);
+                        defer chain.deinit();
+                        _ = try self.writeMessage(onebot.action.GroupMessageReq{ .group_id = e.group_id.?, .message = chain.text("城市已添加") });
+                        return;
+                    }
+                }
+            } else if (utils.checkCommandStart(e.raw_message, "admin")) {
+                var chain = onebot.MessageChain.init(self.app.allocator);
+                defer chain.deinit();
+                chain.text("管理指令:\n!bind <城市>\n!addcity <省份> <城市>");
+                _ = try self.writeMessage(onebot.action.GroupMessageReq{ .group_id = e.group_id.?, .message = &chain });
+                return;
             }
         }
     }

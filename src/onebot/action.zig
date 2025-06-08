@@ -52,7 +52,45 @@ pub fn new(comptime H: type, h: H, allocator: std.mem.Allocator) !DynamicApiRequ
     };
 }
 
-// TODD: get_group_member_info
+// Implement a basic group member info API wrapper
+pub const GetGroupMemberInfo = struct {
+    pub const action = "get_group_member_info";
+    group_id: i64,
+    user_id: i64,
+    no_cache: bool = false,
+
+    pub fn toJson(self: *const @This(), allocator: std.mem.Allocator) !?json.Value {
+        return try utils.objectFromValues(allocator, &.{
+            .{ "group_id", json.Value{ .integer = self.group_id } },
+            .{ "user_id", json.Value{ .integer = self.user_id } },
+            .{ "no_cache", json.Value{ .bool = self.no_cache } },
+        });
+    }
+
+    pub const Ret = struct {
+        group_id: i64,
+        user_id: i64,
+        nickname: String,
+        card: String,
+
+        pub fn fromJson(value: json.Value, allocator: std.mem.Allocator) !Ret {
+            const root = value.object;
+            return Ret{
+                .group_id = root.get("group_id").?.integer,
+                .user_id = root.get("user_id").?.integer,
+                .nickname = try String.init_with_contents(allocator, root.get("nickname").?.string),
+                .card = try String.init_with_contents(allocator, root.get("card").?.string),
+            };
+        }
+
+        pub fn deinit(self: Ret) void {
+            self.nickname.deinit();
+            self.card.deinit();
+        }
+    };
+};
+
+// get_group_member_info implemented above
 
 pub const GetGroupInfo = struct {
     pub const action = "get_group_info";

@@ -340,7 +340,7 @@ pub const BsonConverter = struct {
                     _ = c.bson_append_date_time(doc, field_name.ptr, @intCast(field_name.len), timestamp_ms);
                 } else if (T == MongoObjectId) {
                     // ObjectId 类型
-                    const oid_bytes = value.toBytes();
+                    const oid_bytes = try value.toBytes();
                     var oid: c.bson_oid_t = undefined;
                     @memcpy(@as([*]u8, @ptrCast(&oid))[0..12], &oid_bytes);
                     _ = c.bson_append_oid(doc, field_name.ptr, @intCast(field_name.len), &oid);
@@ -491,6 +491,44 @@ pub const MongoConnection = struct {
         }
 
         return results.toOwnedSlice();
+    }
+
+    pub fn insertOne(self: *Self, doc: anytype) !void {
+        const bdoc = try BsonConverter.toBson(doc);
+        defer c.bson_destroy(bdoc);
+
+        var err: c.bson_error_t = undefined;
+        if (c.mongoc_collection_insert_one(self.ptr, bdoc, null, null, &err)) {
+            return;
+        } else {
+            return error.MongoInsertFailure;
+        }
+    }
+
+    pub fn replaceOne(
+        self: *Self,
+        filter: anytype,
+        replacement: anytype,
+        upsert: bool,
+    ) !void {
+        const filter_doc = try BsonConverter.toBson(filter);
+        defer c.bson_destroy(filter_doc);
+        const repl_doc = try BsonConverter.toBson(replacement);
+        defer c.bson_destroy(repl_doc);
+
+        var opts: ?*c.bson_t = null;
+        if (upsert) {
+            opts = c.bson_new();
+            _ = c.bson_append_bool(opts.?, "upsert", 6, true);
+        }
+        defer if (opts) |o| c.bson_destroy(o);
+
+        var err: c.bson_error_t = undefined;
+        if (c.mongoc_collection_replace_one(self.ptr, filter_doc, repl_doc, opts, null, &err)) {
+            return;
+        } else {
+            return error.MongoReplaceFailure;
+        }
     }
 
     pub fn deinit(self: Self) void {
