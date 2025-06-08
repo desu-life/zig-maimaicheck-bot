@@ -27,7 +27,7 @@ TODO 功能方面:
 * （也许）增加个人关注机厅的功能
 * （也许）把文字输出改成图片
 
-## refrence
+## reference
 
 <https://github.com/Aandreba/zigrc>
 <https://github.com/erik-dunteman/chanz>

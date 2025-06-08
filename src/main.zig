@@ -17,8 +17,8 @@ pub const std_options = std.Options{ .log_scope_levels = &[_]std.log.ScopeLevel{
 pub const RetWrapper = struct { ret: onebot.action.DynamicApiReturn, arena: rc.Arc(std.heap.ArenaAllocator) };
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}).init;
-    defer gpa.deinit();
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     // init mongodb
