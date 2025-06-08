@@ -219,7 +219,7 @@ const Handler = struct {
             } else if (utils.checkCommandStart(e.raw_message, "admin")) {
                 var chain = onebot.MessageChain.init(self.app.allocator);
                 defer chain.deinit();
-                try chain.text("管理指令:\n!bind <城市>\n!addcity <省份> <城市>");
+                chain.text("管理指令:\n!bind <城市>\n!addcity <省份> <城市>");
                 _ = try self.writeMessage(onebot.action.GroupMessageReq{ .group_id = e.group_id.?, .message = &chain });
                 return;
             }
